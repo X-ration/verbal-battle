@@ -33,9 +33,9 @@ VerbalBattleGame#roundTakeEffects方法中。
 
 ### v1.1版本
 引入愤怒状态及相应的处理机制，优化合并了部分代码。
-![](resources/v1.1-1.png)
-![](resources/v1.1-2.png)
-![](resources/v1.1-3.png)
+![](code/resources/v1.1-1.png)
+![](code/resources/v1.1-2.png)
+![](code/resources/v1.1-3.png)
 ### v1.0版本
 初始版本，实现了除愤怒状态外的基本逻辑。根据预设的特殊牌概率发放
 特殊牌，发牌、电脑出牌策略为随机。
