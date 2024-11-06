@@ -325,7 +325,6 @@ public class VerbalBattleGame {
         }
     }
 
-    //todo 应用卡牌效果，判断回合结束
     public void roundTakeEffects() {
         Round round = roundList.get(roundList.size() - 1);
         switch (round.getEffect()) {
