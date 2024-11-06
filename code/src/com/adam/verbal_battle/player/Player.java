@@ -2,6 +2,7 @@ package com.adam.verbal_battle.player;
 
 import com.adam.verbal_battle.Assert;
 import com.adam.verbal_battle.ConsoleUtils;
+import com.adam.verbal_battle.DebugUtils;
 import com.adam.verbal_battle.game.Card;
 import com.adam.verbal_battle.game.VerbalBattleGame;
 import com.adam.verbal_battle.person.Person;
@@ -12,15 +13,21 @@ import java.util.List;
 
 public abstract class Player {
 
+    private static int INVALID_LAST_ANGRY_ROUNDS = 0;
+
     protected Person person;
     protected int life;
     protected int anger;
+    protected boolean angry;
+    protected int lastAngryRound;
     protected List<Card> cardList;
 
     public Player() {
         this.life = 100;
         this.anger = 0;
         this.cardList = new LinkedList<>();
+        this.angry = false;
+        this.lastAngryRound = INVALID_LAST_ANGRY_ROUNDS;
     }
 
     public Person choosePerson(int index) {
@@ -56,6 +63,18 @@ public abstract class Player {
         return cardList.size();
     }
 
+    public boolean isAngry() {
+        return angry;
+    }
+
+    public void setAngry(boolean angry) {
+        this.angry = angry;
+    }
+
+    public int getLastAngryRound() {
+        return lastAngryRound;
+    }
+
     public abstract String formatCards();
 
     public void addCard(Card card) {
@@ -85,19 +104,30 @@ public abstract class Player {
         return life;
     }
 
-    public int changeAnger(int change) {
+    public int changeAnger(int change, int roundIndex) {
         Assert.assertTrue(change >= -100 && change <= 100, "changeAnger change  invalid");
-        if(change + anger < 0) {
+        if (change + anger < 0) {
             change = -anger;
-        } else if(change + anger > 100) {
+        } else if (change + anger > 100) {
             change = 100 - anger;
         }
         anger += change;
-        if(change < 0) {
+        if (change < 0) {
             ConsoleUtils.println(getPlayerName() + "怒气值减少" + change + "点");
-        } else if(change > 0) {
+        } else if (change > 0) {
             ConsoleUtils.println(getPlayerName() + "怒气值增加" + change + "点");
         } else {
+        }
+        if(!angry && anger == 100) {
+            lastAngryRound = roundIndex;
+            DebugUtils.debugPrintln("lastAngryRound="+lastAngryRound);
+            angry = true;
+            ConsoleUtils.println(getPlayerName() + "进入愤怒状态");
+        } else if(angry && anger < 100) {
+            lastAngryRound = INVALID_LAST_ANGRY_ROUNDS;
+            DebugUtils.debugPrintln("lastAngryRound="+lastAngryRound);
+            angry = false;
+            ConsoleUtils.println(getPlayerName() + "回归正常状态");
         }
         return anger;
     }
@@ -106,6 +136,8 @@ public abstract class Player {
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(getPlayerName()).append(":").append(person.getName()).append(" ")
+                .append("性格:").append(person.getCharacter().getDesc()).append(" ")
+                .append("状态:").append(angry ? "愤怒" : "正常").append(" ")
                 .append("智力:").append(person.getIntelligence()).append(" ")
                 .append("生命值:").append(getLife()).append(" ")
                 .append("怒气值:").append(getAnger());

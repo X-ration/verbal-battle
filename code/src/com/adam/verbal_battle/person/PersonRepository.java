@@ -23,7 +23,8 @@ public class PersonRepository {
                 String[] lineSplits = line.split("\t");
                 String name = lineSplits[0];
                 int intelligence = Integer.parseInt(lineSplits[1]);
-                Person person = new Person(i++, name, intelligence);
+                Character character = Character.findByDesc(lineSplits[2]);
+                Person person = new Person(i++, name, intelligence, character);
                 personList.add(person);
             }
         } catch (IOException e) {
@@ -34,7 +35,7 @@ public class PersonRepository {
 
     public String formatPersonsWithHeader() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("序号\t姓名\t\t智力").append(System.lineSeparator());
+        stringBuilder.append("序号\t姓名\t\t智力\t性格").append(System.lineSeparator());
         int i=1;
         for(Person person: personList) {
             stringBuilder.append(i++).append("\t").append(person).append(System.lineSeparator());

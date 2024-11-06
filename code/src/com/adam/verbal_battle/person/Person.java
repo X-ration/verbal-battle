@@ -5,11 +5,13 @@ public class Person {
     private int index;
     private String name;
     private int intelligence;
+    private Character character;
 
-    public Person(int index, String name, int intelligence) {
+    public Person(int index, String name, int intelligence, Character character) {
         this.index = index;
         this.name = name;
         this.intelligence = intelligence;
+        this.character = character;
     }
 
     public int getIndex() {
@@ -24,6 +26,10 @@ public class Person {
         return intelligence;
     }
 
+    public Character getCharacter() {
+        return character;
+    }
+
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
@@ -33,7 +39,7 @@ public class Person {
         } else {
             stringBuilder.append("\t\t");
         }
-        stringBuilder.append(getIntelligence());
+        stringBuilder.append(getIntelligence()).append("\t").append(getCharacter().getDesc());
         return stringBuilder.toString();
     }
 }
