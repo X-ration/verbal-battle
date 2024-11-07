@@ -5,6 +5,7 @@ import com.adam.verbal_battle.ConsoleUtils;
 import com.adam.verbal_battle.DebugUtils;
 import com.adam.verbal_battle.game.Card;
 import com.adam.verbal_battle.game.VerbalBattleGame;
+import com.adam.verbal_battle.person.Character;
 import com.adam.verbal_battle.person.Person;
 import com.adam.verbal_battle.person.PersonRepository;
 
@@ -15,6 +16,7 @@ public abstract class Player {
 
     private static int INVALID_LAST_ANGRY_ROUNDS = 0;
 
+    protected String playerName;
     protected Person person;
     protected int life;
     protected int anger;
@@ -22,7 +24,9 @@ public abstract class Player {
     protected int lastAngryRound;
     protected List<Card> cardList;
 
-    public Player() {
+    public Player(String playerName) {
+        Assert.assertTrue(playerName != null, "new Player playerName null");
+        this.playerName = playerName;
         this.life = 100;
         this.anger = 0;
         this.cardList = new LinkedList<>();
@@ -38,13 +42,7 @@ public abstract class Player {
     }
 
     public String getPlayerName() {
-        if(this instanceof ArtificialPlayer) {
-            return "玩家";
-        } else if(this instanceof ComputerPlayer) {
-            return "电脑";
-        } else {
-            return "未知";
-        }
+        return playerName;
     }
 
     public int getLife() {
@@ -75,7 +73,18 @@ public abstract class Player {
         return lastAngryRound;
     }
 
-    public abstract String formatCards();
+    public String formatCards() {
+        StringBuilder stringBuilder = new StringBuilder();
+        if(isAngry() && getPerson().getCharacter() == Character.CALM) {
+            stringBuilder.append("0.熟虑 ");
+        }
+        int i = 1;
+        for(Card card:cardList) {
+            stringBuilder.append(i++).append(".").append(card.getDesc()).append(" ");
+        }
+        stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+        return stringBuilder.toString();
+    }
 
     public void addCard(Card card) {
         Assert.assertTrue(card != null, "addCard card is null");

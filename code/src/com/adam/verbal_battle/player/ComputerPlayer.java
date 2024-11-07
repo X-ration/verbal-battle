@@ -9,7 +9,9 @@ import java.util.Random;
 
 public class ComputerPlayer extends Player{
 
-    private static ComputerPlayer INSTANCE;
+    public ComputerPlayer(String playerName) {
+        super(playerName);
+    }
 
     public Person choosePerson() {
         Random random = new Random();
@@ -17,19 +19,16 @@ public class ComputerPlayer extends Player{
                 random.nextInt(PersonRepository.getINSTANCE().getPersonSize()) + 1);
     }
 
-    public static ComputerPlayer getINSTANCE() {
-        if(INSTANCE == null) {
-            synchronized (ComputerPlayer.class) {
-                if(INSTANCE == null) {
-                    INSTANCE = new ComputerPlayer();
-                }
-            }
-        }
-        return INSTANCE;
+    public Person choosePersonWithExclusion(int exclusion) {
+        Random random = new Random();
+        int index;
+        do {
+            index = random.nextInt(PersonRepository.getINSTANCE().getPersonSize()) + 1;
+        } while (index == exclusion);
+        return choosePerson(index);
     }
 
-    @Override
-    public String formatCards() {
+    public String formatCoveringCards() {
         StringBuilder stringBuilder = new StringBuilder();
         for(Card card:cardList) {
             stringBuilder.append(card instanceof NormalCard ? "普通卡片" : "特殊卡片").append(" ");

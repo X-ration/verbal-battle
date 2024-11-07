@@ -15,20 +15,33 @@ import java.util.Random;
 public class VerbalBattleGame {
 
     private static VerbalBattleGame INSTANCE;
-    //生成特殊卡片的概率
-    public static double CHANCE_SPECIAL_CARD = 0.15;
-    //只出普通卡片的情况下回合环境可以保持的回合数
-    public static int ROUND_TYPE_KEEP_ROUNDS = 5;
-    //愤怒状态持续的回合数
-    public static int ANGRY_KEEP_ROUNDS = 3;
-    public static int RASH_ANGRY_LIFE_HIT = -30;
+    /**
+     * 生成特殊卡片的概率
+     */
+    public static final double CHANCE_SPECIAL_CARD = 0.15;
+    /**
+     * 只出普通卡片的情况下回合环境可以保持的回合数
+     */
+    public static final int ROUND_TYPE_KEEP_ROUNDS = 5;
+    /**
+     * 愤怒状态持续的回合数
+     */
+    public static final int ANGRY_KEEP_ROUNDS = 3;
+    /**
+     * 莽撞性格愤怒状态产生的生命伤害
+     */
+    public static final int RASH_ANGRY_LIFE_HIT = -30;
+    public static final int GAME_MODE_ARTIFICIAL_COMPUTER = 1;
+    public static final int GAME_MODE_ARTIFICIAL_ARTIFICIAL = 2;
+    public static final int GAME_MODE_COMPUTER_COMPUTER = 3;
 
-    private ArtificialPlayer artificialPlayer = (ArtificialPlayer) ArtificialPlayer.getINSTANCE();
-    private ComputerPlayer computerPlayer = (ComputerPlayer) ComputerPlayer.getINSTANCE();
+    private Player player;
+    private Player componentPlayer;
     private boolean gameOver;
     private boolean win;
     private List<Round> roundList = new LinkedList<>();
     private int lastRoundTypeChangedRound = 1;
+    private int gameMode;
     private boolean firstRoundChangeRoundType = false;
 
     public static VerbalBattleGame getINSTANCE() {
@@ -40,6 +53,44 @@ public class VerbalBattleGame {
             }
         }
         return INSTANCE;
+    }
+
+    /**
+     * 重新恢复单例对象的初始状态
+     */
+    public void reset() {
+        this.player = null;
+        this.componentPlayer = null;
+        this.gameOver = false;
+        this.win = false;
+        this.roundList = new LinkedList<>();
+        this.lastRoundTypeChangedRound = 1;
+        this.gameMode = 0;
+        this.firstRoundChangeRoundType = false;
+    }
+
+    public int getGameMode() {
+        return gameMode;
+    }
+
+    public void setGameMode(int gameMode) {
+        this.gameMode = gameMode;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
+    public Player getComponentPlayer() {
+        return componentPlayer;
+    }
+
+    public void setComponentPlayer(Player componentPlayer) {
+        this.componentPlayer = componentPlayer;
     }
 
     public boolean isGameOver() {
@@ -59,20 +110,24 @@ public class VerbalBattleGame {
     }
 
     public void printPlayerStatus() {
-        ConsoleUtils.print(artificialPlayer.toString());
+        ConsoleUtils.print(this.player.toString());
         ConsoleUtils.print("|");
-        ConsoleUtils.println(computerPlayer.toString());
+        ConsoleUtils.println(this.componentPlayer.toString());
     }
 
     public void printPlayerCards() {
-        ConsoleUtils.print("玩家卡片:" + artificialPlayer.formatCards());
+        ConsoleUtils.print(player.getPlayerName() + "卡片:" + this.player.formatCards());
         ConsoleUtils.print("|");
-        ConsoleUtils.println("电脑卡片:" + computerPlayer.formatCards());
+        if(gameMode == GAME_MODE_ARTIFICIAL_COMPUTER) {
+            ConsoleUtils.println(componentPlayer.getPlayerName() + "卡片:" + ((ComputerPlayer)this.componentPlayer).formatCoveringCards());
+        } else {
+            ConsoleUtils.println(componentPlayer.getPlayerName() + "卡片:" + this.componentPlayer.formatCards());
+        }
     }
 
     public void initializeCards() {
-        initializeCards(computerPlayer);
-        initializeCards(artificialPlayer);
+        initializeCards(this.componentPlayer);
+        initializeCards(this.player);
     }
 
     private void initializeCards(Player player) {
@@ -115,8 +170,8 @@ public class VerbalBattleGame {
     }
 
     public void addCards() {
-        addCard(artificialPlayer);
-        addCard(computerPlayer);
+        addCard(this.player);
+        addCard(this.componentPlayer);
     }
 
     private void addCard(Player player) {
@@ -163,67 +218,102 @@ public class VerbalBattleGame {
         ConsoleUtils.println("-------------第" + round.getIndex() + "回合,环境:" + round.getRoundType().getDesc() + "------------");
     }
 
-    //todo 电脑出牌策略
-    public Card computerMove() {
-        if(computerPlayer.isAngry() && computerPlayer.getPerson().getCharacter() == Character.CALM) {
-            ConsoleUtils.println("电脑使用了熟虑");
-            initializeCards(computerPlayer);
-            ConsoleUtils.println("电脑卡片:" + computerPlayer.formatCards());
+    /**
+     * 电脑出牌
+     * todo 电脑出牌策略
+     * @param player
+     * @return
+     */
+    public Card computerMove(Player player) {
+        if(player.isAngry() && player.getPerson().getCharacter() == Character.CALM) {
+            ConsoleUtils.println(player.getPlayerName() + "使用了熟虑");
+            initializeCards(player);
+            ConsoleUtils.println(player.getPlayerName() + "卡片:" + player.formatCards());
         }
         Round round = roundList.get(roundList.size() - 1);
         Random random = new Random();
-        int cardIndex = random.nextInt(computerPlayer.getCardSize()) + 1;
-        Card card = computerPlayer.removeCard(cardIndex);
-        round.setComputerMove(card);
+        int cardIndex = random.nextInt(player.getCardSize()) + 1;
+        Card card = player.removeCard(cardIndex);
+        if(player == this.player) {
+            round.setPlayerMove(card);
+        } else if(player == this.componentPlayer) {
+            round.setComponentPlayerMove(card);
+        } else {
+            ConsoleUtils.printErrorAndExit("computerMove invalid state");
+        }
         return card;
     }
 
-    public Card artificialMove() {
-        boolean calmCharacterAngry = artificialPlayer.isAngry() && artificialPlayer.getPerson().getCharacter() == Character.CALM;
+    /**
+     * 玩家出牌
+     * @param player
+     * @return
+     */
+    public Card artificialMove(Player player) {
+        boolean calmCharacterAngry = player.isAngry() && player.getPerson().getCharacter() == Character.CALM;
         int min = calmCharacterAngry ? 0 : 1;
-        int index = ConsoleUtils.inputWithRange("请选择卡牌（序号）：", min, artificialPlayer.getCardSize());
-        Assert.assertTrue(index>=min && index <= artificialPlayer.getCardSize(), "artificialMove index invalid");
+        int index = ConsoleUtils.inputWithRange(player.getPlayerName() + "请选择卡牌（序号）：", min, player.getCardSize());
+        Assert.assertTrue(index>=min && index <= player.getCardSize(), "artificialMove index invalid");
         while(index == 0) {
-            ConsoleUtils.println("玩家使用了熟虑");
-            initializeCards(artificialPlayer);
-            ConsoleUtils.println("玩家卡片:" + artificialPlayer.formatCards());
-            index = ConsoleUtils.inputWithRange("请选择卡牌（序号）：", min, artificialPlayer.getCardSize());
-            Assert.assertTrue(index>=min && index <= artificialPlayer.getCardSize(), "artificialMove index invalid");
+            ConsoleUtils.println(player.getPlayerName() + "使用了熟虑");
+            initializeCards(player);
+            ConsoleUtils.println(player.getPlayerName() + "卡片:" + player.formatCards());
+            index = ConsoleUtils.inputWithRange(player.getPlayerName() + "请选择卡牌（序号）：", min, player.getCardSize());
+            Assert.assertTrue(index>=min && index <= player.getCardSize(), "artificialMove index invalid");
         }
         Round round = roundList.get(roundList.size() - 1);
-        Card card = artificialPlayer.removeCard(index);
-        round.setArtificialMove(card);
+        Card card = player.removeCard(index);
+        if(player == this.player) {
+            round.setPlayerMove(card);
+        } else if(player == this.componentPlayer) {
+            round.setComponentPlayerMove(card);
+        } else {
+            ConsoleUtils.printErrorAndExit("artificialMove invalid state");
+        }
         return card;
+    }
+
+    private Card playerMove(Player player) {
+        if(player instanceof ArtificialPlayer) {
+            return artificialMove(player);
+        } else if(player instanceof ComputerPlayer) {
+            return computerMove(player);
+        } else {
+            ConsoleUtils.printErrorAndExit("playerMove invalid state");
+            return null;
+        }
     }
 
     public void roundMove() {
-        Card artificialMove, computerMove;
+        Card playerMove, componentMove;
         if(roundList.size() == 1) {
-            artificialMove = artificialMove();
-            computerMove = computerMove();
-            ConsoleUtils.println("玩家出牌：" + artificialMove.getDesc());
-            ConsoleUtils.println("电脑出牌：" + computerMove.getDesc());
+            playerMove = playerMove(this.player);
+            componentMove = playerMove(this.componentPlayer);
+            ConsoleUtils.println(this.player.getPlayerName() + "出牌：" + playerMove.getDesc());
+            ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
         } else {
             Round lastRound = roundList.get(roundList.size() - 2);
             if(lastRound.isWin()) {
-                artificialMove = artificialMove();
-                computerMove = computerMove();
-                ConsoleUtils.println("玩家出牌：" + artificialMove.getDesc());
-                ConsoleUtils.println("电脑出牌：" + computerMove.getDesc());
+                playerMove = playerMove(this.player);
+                componentMove = playerMove(this.componentPlayer);
+                ConsoleUtils.println(this.player.getPlayerName() + "出牌：" + playerMove.getDesc());
+                ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
             } else {
-                computerMove = computerMove();
-                ConsoleUtils.println("电脑出牌：" + (computerMove instanceof SpecialCard ? "特殊卡片" : "普通卡片"));
-                artificialMove = artificialMove();
-                ConsoleUtils.println("玩家出牌：" + artificialMove.getDesc());
-                ConsoleUtils.println("电脑出牌：" + computerMove.getDesc());
+                componentMove = playerMove(this.componentPlayer);
+                if(gameMode == GAME_MODE_ARTIFICIAL_COMPUTER) {
+                    ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + (componentMove instanceof SpecialCard ? "特殊卡片" : "普通卡片"));
+                }
+                playerMove = playerMove(this.player);
+                ConsoleUtils.println(this.player.getPlayerName() + "出牌：" + playerMove.getDesc());
+                ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
             }
         }
     }
 
     public void roundJudge() {
         Round round = roundList.get(roundList.size() - 1);
-        Card computerMove = round.getComputerMove(),
-                artificialMove = round.getArtificialMove();
+        Card playerMove = round.getPlayerMove(),
+                componentPlayerMove = round.getComponentPlayerMove();
         round.setEffect(Effect.NONE);
         boolean firstMove;
         if(roundList.size() == 1) {
@@ -232,138 +322,142 @@ public class VerbalBattleGame {
             firstMove = roundList.get(roundList.size() - 2).isWin();
         }
         //同时出特殊牌
-        if(computerMove instanceof SpecialCard && artificialMove instanceof SpecialCard) {
-            if(computerMove == artificialMove) {
+        if(componentPlayerMove instanceof SpecialCard && playerMove instanceof SpecialCard) {
+            if(componentPlayerMove == playerMove && componentPlayerMove == SpecialCard.ROAR) {
             }
-            else if(computerMove == SpecialCard.ROAR && artificialMove == SpecialCard.IGNORE) {
+            else if(componentPlayerMove == playerMove && (componentPlayerMove == SpecialCard.IGNORE ||
+                    componentPlayerMove == SpecialCard.ANGRY || componentPlayerMove == SpecialCard.CALM)) {
+                round.setEffect(firstMove ? Effect.BOTH_FIRST : Effect.BOTH_SECOND);
+            }
+            else if(componentPlayerMove == SpecialCard.ROAR && playerMove == SpecialCard.IGNORE) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
-            else if(computerMove == SpecialCard.ROAR && artificialMove == SpecialCard.ANGRY) {
+            else if(componentPlayerMove == SpecialCard.ROAR && playerMove == SpecialCard.ANGRY) {
                 round.setWin(false);
                 round.setEffect(Effect.BOTH_SECOND);
             }
-            else if(computerMove == SpecialCard.ROAR && artificialMove == SpecialCard.CALM) {
+            else if(componentPlayerMove == SpecialCard.ROAR && playerMove == SpecialCard.CALM) {
                 round.setWin(false);
                 round.setEffect(Effect.BOTH_SECOND);
             }
-            else if(artificialMove == SpecialCard.ROAR && computerMove == SpecialCard.IGNORE) {
+            else if(playerMove == SpecialCard.ROAR && componentPlayerMove == SpecialCard.IGNORE) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(artificialMove == SpecialCard.ROAR && computerMove == SpecialCard.ANGRY) {
+            else if(playerMove == SpecialCard.ROAR && componentPlayerMove == SpecialCard.ANGRY) {
                 round.setWin(true);
                 round.setEffect(Effect.BOTH_FIRST);
             }
-            else if(artificialMove == SpecialCard.ROAR && computerMove == SpecialCard.CALM) {
+            else if(playerMove == SpecialCard.ROAR && componentPlayerMove == SpecialCard.CALM) {
                 round.setWin(true);
                 round.setEffect(Effect.BOTH_FIRST);
             }
-            else if(computerMove == SpecialCard.IGNORE && artificialMove == SpecialCard.ANGRY) {
+            else if(componentPlayerMove == SpecialCard.IGNORE && playerMove == SpecialCard.ANGRY) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(computerMove == SpecialCard.IGNORE && artificialMove == SpecialCard.CALM) {
+            else if(componentPlayerMove == SpecialCard.IGNORE && playerMove == SpecialCard.CALM) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(artificialMove == SpecialCard.IGNORE && computerMove == SpecialCard.ANGRY) {
+            else if(playerMove == SpecialCard.IGNORE && componentPlayerMove == SpecialCard.ANGRY) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
-            else if(artificialMove == SpecialCard.IGNORE && computerMove == SpecialCard.CALM) {
+            else if(playerMove == SpecialCard.IGNORE && componentPlayerMove == SpecialCard.CALM) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
-            else if(computerMove == SpecialCard.ANGRY && artificialMove == SpecialCard.CALM) {
+            else if(componentPlayerMove == SpecialCard.ANGRY && playerMove == SpecialCard.CALM) {
                 round.setEffect(firstMove ? Effect.BOTH_FIRST: Effect.BOTH_SECOND);
             }
-            else if(artificialMove == SpecialCard.ANGRY && computerMove == SpecialCard.CALM) {
+            else if(playerMove == SpecialCard.ANGRY && componentPlayerMove == SpecialCard.CALM) {
                 round.setEffect(firstMove ? Effect.BOTH_FIRST: Effect.BOTH_SECOND);
             }
             else {
                 ConsoleUtils.printErrorAndExit("Invalid game state");
             }
         }
-        //电脑特殊牌，玩家普通牌
-        else if(computerMove instanceof SpecialCard && artificialMove instanceof NormalCard) {
-            if(computerPlayer.isAngry() && computerPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+        //对手特殊牌，自己普通牌
+        else if(componentPlayerMove instanceof SpecialCard && playerMove instanceof NormalCard) {
+            if(this.componentPlayer.isAngry() && this.componentPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(computerMove == SpecialCard.ROAR) {
+            else if(componentPlayerMove == SpecialCard.ROAR) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
-            } else if(computerMove == SpecialCard.IGNORE) {
+                round.setEffect(Effect.COMPONENT_PLAYER);
+            } else if(componentPlayerMove == SpecialCard.IGNORE) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
-            } else if(computerMove == SpecialCard.ANGRY || computerMove == SpecialCard.CALM) {
+                round.setEffect(Effect.COMPONENT_PLAYER);
+            } else if(componentPlayerMove == SpecialCard.ANGRY || componentPlayerMove == SpecialCard.CALM) {
                 round.setWin(true);
                 round.setEffect(firstMove ? Effect.BOTH_FIRST: Effect.BOTH_SECOND);
             } else {
                 ConsoleUtils.printErrorAndExit("Invalid game state");
             }
         }
-        //电脑普通牌，玩家特殊牌
-        else if(computerMove instanceof NormalCard && artificialMove instanceof SpecialCard) {
-            if(artificialPlayer.isAngry() && artificialPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+        //对手普通牌，自己特殊牌
+        else if(componentPlayerMove instanceof NormalCard && playerMove instanceof SpecialCard) {
+            if(this.player.isAngry() && this.player.getPerson().getCharacter() == Character.RESOLUTE) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
-            else if(artificialMove == SpecialCard.ROAR) {
+            else if(playerMove == SpecialCard.ROAR) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
-            } else if(artificialMove == SpecialCard.IGNORE) {
+                round.setEffect(Effect.PLAYER);
+            } else if(playerMove == SpecialCard.IGNORE) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
-            } else if(artificialMove == SpecialCard.ANGRY || artificialMove == SpecialCard.CALM) {
+                round.setEffect(Effect.PLAYER);
+            } else if(playerMove == SpecialCard.ANGRY || playerMove == SpecialCard.CALM) {
                 round.setWin(false);
                 round.setEffect(firstMove ? Effect.BOTH_FIRST: Effect.BOTH_SECOND);
             } else {
                 ConsoleUtils.printErrorAndExit("Invalid game state");
             }
         }
-        //电脑普通牌，玩家普通牌
-        else if(computerMove instanceof NormalCard && artificialMove instanceof NormalCard) {
-            if(computerPlayer.isAngry() && computerPlayer.getPerson().getCharacter() == Character.RESOLUTE
-                    && artificialPlayer.isAngry() && artificialPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+        //同时出普通牌
+        else if(componentPlayerMove instanceof NormalCard && playerMove instanceof NormalCard) {
+            if(this.componentPlayer.isAngry() && this.componentPlayer.getPerson().getCharacter() == Character.RESOLUTE
+                    && this.player.isAngry() && this.player.getPerson().getCharacter() == Character.RESOLUTE) {
             }
-            else if(computerPlayer.isAngry() && computerPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+            else if(this.componentPlayer.isAngry() && this.componentPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(artificialPlayer.isAngry() && artificialPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+            else if(this.player.isAngry() && this.player.getPerson().getCharacter() == Character.RESOLUTE) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
-            else if(((NormalCard) computerMove).getType() == ((NormalCard) artificialMove).getType()) {
-                if(((NormalCard) computerMove).getPower().ordinal() < ((NormalCard) artificialMove).getPower().ordinal()) {
+            else if(((NormalCard) componentPlayerMove).getType() == ((NormalCard) playerMove).getType()) {
+                if(((NormalCard) componentPlayerMove).getPower().ordinal() < ((NormalCard) playerMove).getPower().ordinal()) {
                     round.setWin(true);
-                    round.setEffect(Effect.ARTIFICIAL);
+                    round.setEffect(Effect.PLAYER);
                 }
-                else if(((NormalCard) computerMove).getPower().ordinal() > ((NormalCard) artificialMove).getPower().ordinal()) {
+                else if(((NormalCard) componentPlayerMove).getPower().ordinal() > ((NormalCard) playerMove).getPower().ordinal()) {
                     round.setWin(false);
-                    round.setEffect(Effect.COMPUTER);
+                    round.setEffect(Effect.COMPONENT_PLAYER);
                 }
                 else {
                 }
             }
-            else if(((NormalCard) computerMove).getType() == round.getRoundType()) {
+            else if(((NormalCard) componentPlayerMove).getType() == round.getRoundType()) {
                 round.setWin(false);
-                round.setEffect(Effect.COMPUTER);
+                round.setEffect(Effect.COMPONENT_PLAYER);
             }
-            else if(((NormalCard) artificialMove).getType() == round.getRoundType()) {
+            else if(((NormalCard) playerMove).getType() == round.getRoundType()) {
                 round.setWin(true);
-                round.setEffect(Effect.ARTIFICIAL);
+                round.setEffect(Effect.PLAYER);
             }
             else {
-                if(((NormalCard) computerMove).getPower().ordinal() < ((NormalCard) artificialMove).getPower().ordinal()) {
+                if(((NormalCard) componentPlayerMove).getPower().ordinal() < ((NormalCard) playerMove).getPower().ordinal()) {
                     round.setWin(true);
-                    round.setEffect(Effect.ARTIFICIAL);
+                    round.setEffect(Effect.PLAYER);
                 }
-                else if(((NormalCard) computerMove).getPower().ordinal() > ((NormalCard) artificialMove).getPower().ordinal()) {
+                else if(((NormalCard) componentPlayerMove).getPower().ordinal() > ((NormalCard) playerMove).getPower().ordinal()) {
                     round.setWin(false);
-                    round.setEffect(Effect.COMPUTER);
+                    round.setEffect(Effect.COMPONENT_PLAYER);
                 }
                 else {
                 }
@@ -371,7 +465,7 @@ public class VerbalBattleGame {
         } else {
             ConsoleUtils.printErrorAndExit("Invalid game state");
         }
-        if(computerMove instanceof SpecialCard || artificialMove instanceof SpecialCard) {
+        if(componentPlayerMove instanceof SpecialCard || playerMove instanceof SpecialCard) {
             lastRoundTypeChangedRound = round.getIndex();
             DebugUtils.debugPrintln("lastRoundTypeChangedRound=" + lastRoundTypeChangedRound);
             if(roundList.size() == 1) {
@@ -385,41 +479,51 @@ public class VerbalBattleGame {
         int roundIndex = round.getIndex();
         switch (round.getEffect()) {
             case BOTH_FIRST:
-                artificialEffect(round, roundIndex);
-                computerEffect(round, roundIndex);
+                playerEffect(round, roundIndex);
+                componentPlayerEffect(round, roundIndex);
                 break;
             case BOTH_SECOND:
-                computerEffect(round, roundIndex);
-                artificialEffect(round, roundIndex);
+                componentPlayerEffect(round, roundIndex);
+                playerEffect(round, roundIndex);
                 break;
             case NONE:
                 ConsoleUtils.println("平局，不产生效果");
+                automaticEndAngryStatus(player, roundIndex);
+                automaticEndAngryStatus(componentPlayer, roundIndex);
                 break;
-            case COMPUTER:
-                computerEffect(round, roundIndex);
+            case COMPONENT_PLAYER:
+                componentPlayerEffect(round, roundIndex);
                 break;
-            case ARTIFICIAL:
-                artificialEffect(round, roundIndex);
+            case PLAYER:
+                playerEffect(round, roundIndex);
                 break;
         }
         printPlayerStatus();
-        if(artificialPlayer.getLife() == 0) {
+        if(this.player.getLife() == 0) {
             setWin(false);
             setGameOver(true);
-        } else if(computerPlayer.getLife() == 0) {
+        } else if(this.componentPlayer.getLife() == 0) {
             setWin(true);
             setGameOver(true);
         }
     }
 
-    private void computerEffect(Round round, int roundIndex) {
-        cardToPlayerEffect(round.getComputerMove(), computerPlayer, artificialPlayer, roundIndex, true);
+    private void componentPlayerEffect(Round round, int roundIndex) {
+        cardToPlayerEffect(round.getComponentPlayerMove(), this.componentPlayer, this.player, roundIndex, true);
     }
 
-    private void artificialEffect(Round round, int roundIndex) {
-        cardToPlayerEffect(round.getArtificialMove(), artificialPlayer, computerPlayer, roundIndex, true);
+    private void playerEffect(Round round, int roundIndex) {
+        cardToPlayerEffect(round.getPlayerMove(), this.player, this.componentPlayer, roundIndex, true);
     }
 
+    /**
+     * 卡牌的效果对玩家发动
+     * @param card 卡牌
+     * @param player 拥有卡牌的玩家
+     * @param componentPlayer 拥有卡牌的对手玩家
+     * @param roundIndex 回合索引
+     * @param firstLevelCall 是否外层调用，避免递归调用
+     */
     private void cardToPlayerEffect(Card card, Player player, Player componentPlayer, int roundIndex, boolean firstLevelCall) {
         if(card == SpecialCard.ROAR) {
             componentPlayer.changeLife(((SpecialCard)card).getLifeHit());
@@ -450,7 +554,12 @@ public class VerbalBattleGame {
         }
     }
 
-    //处理当player玩家处于愤怒状态时的后续操作
+    /**
+     * 处理当player玩家处于愤怒状态时的后续操作
+     * @param player
+     * @param componentPlayer
+     * @param roundIndex
+     */
     private void proceedAngryStatus(Player player, Player componentPlayer, int roundIndex) {
         if(player.getLife() != 0 && player.isAngry()) {
             switch (player.getPerson().getCharacter()) {
@@ -480,7 +589,7 @@ public class VerbalBattleGame {
     }
 
     private void automaticEndAngryStatus(Player player, int roundIndex) {
-        if(roundIndex - player.getLastAngryRound() >= ANGRY_KEEP_ROUNDS) {
+        if(player.isAngry() && roundIndex - player.getLastAngryRound() >= ANGRY_KEEP_ROUNDS) {
             player.changeAnger(-100, roundIndex);
         }
     }

@@ -31,6 +31,14 @@
 round.computerMove中。卡牌的效果以及愤怒效果的发动在
 VerbalBattleGame#roundTakeEffects方法中。
 
+---------------
+
+### v1.2版本
+引入3种游戏模式：
+- 玩家对电脑
+- 玩家对玩家
+- 电脑对电脑
+一次电脑对电脑的控制台输出文件见[console_output.txt](code/resources/console_output.txt)。
 ### v1.1版本
 引入愤怒状态及相应的处理机制，优化合并了部分代码。
 ![](code/resources/v1.1-1.png)

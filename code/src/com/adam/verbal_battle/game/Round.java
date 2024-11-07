@@ -4,7 +4,7 @@ public class Round {
 
     private int index;
     private CardType roundType;
-    private Card computerMove, artificialMove;
+    private Card playerMove, componentPlayerMove;
     private boolean win;
     private Effect effect;
 
@@ -24,20 +24,20 @@ public class Round {
         this.roundType = roundType;
     }
 
-    public Card getComputerMove() {
-        return computerMove;
+    public Card getPlayerMove() {
+        return playerMove;
     }
 
-    public void setComputerMove(Card computerMove) {
-        this.computerMove = computerMove;
+    public void setPlayerMove(Card playerMove) {
+        this.playerMove = playerMove;
     }
 
-    public Card getArtificialMove() {
-        return artificialMove;
+    public Card getComponentPlayerMove() {
+        return componentPlayerMove;
     }
 
-    public void setArtificialMove(Card artificialMove) {
-        this.artificialMove = artificialMove;
+    public void setComponentPlayerMove(Card componentPlayerMove) {
+        this.componentPlayerMove = componentPlayerMove;
     }
 
     public boolean isWin() {
