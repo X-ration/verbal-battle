@@ -2,6 +2,8 @@ package com.adam.verbal_battle.player;
 
 import com.adam.verbal_battle.game.Card;
 import com.adam.verbal_battle.game.NormalCard;
+import com.adam.verbal_battle.game.Round;
+import com.adam.verbal_battle.game.VerbalBattleGame;
 import com.adam.verbal_battle.person.Person;
 import com.adam.verbal_battle.person.PersonRepository;
 
@@ -35,6 +37,18 @@ public class ComputerPlayer extends Player{
         }
         stringBuilder.deleteCharAt(stringBuilder.length() - 1);
         return stringBuilder.toString();
+    }
+
+    /**
+     * 普通电脑出牌策略：随机
+     * @param componentPlayer 对手
+     * @return 出牌
+     */
+    public Card chooseCard(Player componentPlayer, Round round) {
+        VerbalBattleGame.getINSTANCE().reinitializeCards(this);
+        Random random = new Random();
+        int cardIndex = random.nextInt(getCardSize()) + 1;
+        return removeCard(cardIndex);
     }
 
 }

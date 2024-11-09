@@ -61,6 +61,10 @@ public abstract class Player {
         return cardList.size();
     }
 
+    public List<Card> getCardList() {
+        return cardList;
+    }
+
     public boolean isAngry() {
         return angry;
     }
@@ -91,9 +95,25 @@ public abstract class Player {
         cardList.add(card);
     }
 
+    public Card getCard(int index) {
+        Assert.assertTrue(index>0 && index<=getCardSize(), "removeCard index invalid");
+        return cardList.get(index-1);
+    }
+
     public Card removeCard(int index) {
         Assert.assertTrue(index>0 && index<=getCardSize(), "removeCard index invalid");
         return cardList.remove(index-1);
+    }
+
+    public boolean removeCard(Card card) {
+        boolean found = false;
+        for(Card card1: this.cardList) {
+            if(card1 == card) {
+                found = true;
+            }
+        }
+        Assert.assertTrue(found, "removeCard non-existing card");
+        return cardList.remove(card);
     }
 
     public int changeLife(int change) {
@@ -115,6 +135,10 @@ public abstract class Player {
 
     public int changeAnger(int change, int roundIndex) {
         Assert.assertTrue(change >= -100 && change <= 100, "changeAnger change  invalid");
+        //如果生命值为0怒气值不变
+        if(life == 0) {
+            return anger;
+        }
         if (change + anger < 0) {
             change = -anger;
         } else if (change + anger > 100) {
