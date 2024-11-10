@@ -559,8 +559,6 @@ public class VerbalBattleGame {
                 break;
             case NONE:
                 ConsoleUtils.println("平局，不产生效果");
-                automaticEndAngryStatus(player, componentPlayer, roundIndex);
-                automaticEndAngryStatus(componentPlayer, player, roundIndex);
                 break;
             case COMPONENT_PLAYER:
                 componentPlayerEffect(round, roundIndex);
@@ -569,7 +567,6 @@ public class VerbalBattleGame {
                 playerEffect(round, roundIndex);
                 break;
         }
-        printPlayerStatus();
         if(this.player.getLife() == 0) {
             setWin(false);
             setGameOver(true);
@@ -579,24 +576,23 @@ public class VerbalBattleGame {
         }
     }
 
-    private void componentPlayerEffect(Round round, int roundIndex) {
-        AngryStatusChangeRoundWin changeRoundWin = cardToPlayerEffect(round.getComponentPlayerMove(), this.componentPlayer, this.player, round, roundIndex, true);
-        //v1.3修改：player进入愤怒状态可能影响回合的胜负
-        if(changeRoundWin == AngryStatusChangeRoundWin.PLAYER) {
-            round.setWin(false);
-        } else if(changeRoundWin == AngryStatusChangeRoundWin.COMPONENT_PLAYER) {
-            round.setWin(true);
+    /**
+     * 在游戏未结束的情况下，所有卡牌效果发动完成后，自动结束玩家的愤怒状态（持续3回合）
+     */
+    public void automaticEndAngryStatus() {
+        if(!isGameOver()) {
+            Round round = roundList.get(roundList.size() - 1);
+            int roundIndex = round.getIndex();
+            automaticEndAngryStatus(round);
         }
     }
 
+    private void componentPlayerEffect(Round round, int roundIndex) {
+        cardToPlayerEffect(round.getComponentPlayerMove(), this.componentPlayer, this.player, round, roundIndex, true);
+    }
+
     private void playerEffect(Round round, int roundIndex) {
-        AngryStatusChangeRoundWin changeRoundWin = cardToPlayerEffect(round.getPlayerMove(), this.player, this.componentPlayer, round, roundIndex, true);
-        //v1.3修改：player进入愤怒状态可能影响回合的胜负
-        if(changeRoundWin == AngryStatusChangeRoundWin.PLAYER) {
-            round.setWin(true);
-        } else if(changeRoundWin == AngryStatusChangeRoundWin.COMPONENT_PLAYER) {
-            round.setWin(false);
-        }
+        cardToPlayerEffect(round.getPlayerMove(), this.player, this.componentPlayer, round, roundIndex, true);
     }
 
     /**
@@ -608,47 +604,38 @@ public class VerbalBattleGame {
      * @param firstLevelCall 是否外层调用，避免递归调用
      * @return 愤怒状态改变回合胜负的类型，参见枚举类定义
      */
-    private AngryStatusChangeRoundWin cardToPlayerEffect(Card card, Player player, Player componentPlayer, Round round, int roundIndex, boolean firstLevelCall) {
-        boolean componentPlayerChangeRoundWin = false, playerChangeRoundWin = false;
+    private void cardToPlayerEffect(Card card, Player player, Player componentPlayer, Round round, int roundIndex, boolean firstLevelCall) {
         if(card == SpecialCard.ROAR) {
             componentPlayer.changeLife(((SpecialCard)card).getLifeHit());
             componentPlayer.changeAnger(((SpecialCard)card).getAngerHit(), roundIndex);
+            round.setWin(isGlobalPlayerWin(true, player));
             if(firstLevelCall) {
-                componentPlayerChangeRoundWin = angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
-                playerChangeRoundWin = angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
+                angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
+                angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
             }
         } else if(card == SpecialCard.ANGRY) {
             player.changeAnger(((SpecialCard)card).getAngerHit(), roundIndex);
             if(firstLevelCall) {
-                playerChangeRoundWin = angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
-                componentPlayerChangeRoundWin = angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
+                angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
+                angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
             }
         } else if(card instanceof SpecialCard) {
+            if(card == SpecialCard.IGNORE) {
+                round.setWin(isGlobalPlayerWin(true, player));
+            }
             componentPlayer.changeAnger(((SpecialCard)card).getAngerHit(), roundIndex);
             if(firstLevelCall) {
-                componentPlayerChangeRoundWin = angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
-                playerChangeRoundWin = angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
+                angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
+                angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
             }
         } else {
             componentPlayer.changeLife(((NormalCard)card).getLifeHit());
             componentPlayer.changeAnger(((NormalCard)card).getAngerHit(), roundIndex);
+            round.setWin(isGlobalPlayerWin(true, player));
             if(firstLevelCall) {
-                componentPlayerChangeRoundWin = angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
-                playerChangeRoundWin = angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
+                angryStatusTakeEffects(componentPlayer, player, round, roundIndex);
+                angryStatusTakeEffects(player, componentPlayer, round, roundIndex);
             }
-        }
-        if(firstLevelCall) {
-            if(playerChangeRoundWin && componentPlayerChangeRoundWin) {
-                return AngryStatusChangeRoundWin.NO_OP;
-            } else if(playerChangeRoundWin) {
-                return AngryStatusChangeRoundWin.PLAYER;
-            } else if(componentPlayerChangeRoundWin) {
-                return AngryStatusChangeRoundWin.COMPONENT_PLAYER;
-            } else {
-                return AngryStatusChangeRoundWin.NO_OP;
-            }
-        } else {
-            return AngryStatusChangeRoundWin.NO_OP;
         }
     }
 
@@ -659,11 +646,10 @@ public class VerbalBattleGame {
      * @param roundIndex
      * @return player进入愤怒状态是否足以改变回合的胜负
      */
-    private boolean angryStatusTakeEffects(Player player, Player componentPlayer, Round round, int roundIndex) {
+    private void angryStatusTakeEffects(Player player, Player componentPlayer, Round round, int roundIndex) {
         if(player.getLife() != 0 && player.isAngry()) {
             switch (player.getPerson().getCharacter()) {
                 case TIMID:
-                    boolean changeRoundWin = true;
                     int cardIndex = player.getCardSize();
                     if(cardIndex == 0) {
                         break;
@@ -672,18 +658,7 @@ public class VerbalBattleGame {
                     moveCalmCardsToRight(player);
                     int index = findTimidAngryMakeComponentAngryCardIndex(player, componentPlayer);
                     boolean componentChangeRoundWin = index != Card.INDEX_NOT_FOUND;
-                    if(componentChangeRoundWin) {
-                        //1.最后一张牌，则看对方性格
-                        if(index == player.getCardSize()) {
-                            round.setForceSetWin(true);
-                            round.setWin(false);
-                        }
-                        //2.不是最后一张牌，则回合判自己胜
-                        else {
-                        }
-                    }
-                    else {
-                    }
+                    round.setWin(isGlobalPlayerWin(!componentChangeRoundWin, player));
                     while(cardIndex-- > 0) {
                         Card card = player.removeCard(cardIndex + 1);
                         ConsoleUtils.println(player.getPlayerName() + "出牌:" + card.getDesc());
@@ -691,21 +666,29 @@ public class VerbalBattleGame {
                     }
                     initializeCards(player);
                     player.removeCard(player.getCardSize());
-                    player.changeAnger(-100, roundIndex);
-                    return changeRoundWin;
+                    setRoundPlayerEndAngryStatus(player, round);
                 case CALM:
-                    automaticEndAngryStatus(player, componentPlayer, roundIndex);
                     break;
                 case RASH:
                     componentPlayer.changeLife(RASH_ANGRY_LIFE_HIT);
-                    player.changeAnger(-100, roundIndex);
-                    return true;
+                    setRoundPlayerEndAngryStatus(player, round);
+                    round.setWin(isGlobalPlayerWin(true, player));
                 case RESOLUTE:
-                    automaticEndAngryStatus(player, componentPlayer, roundIndex);
                     break;
             }
         }
-        return false;
+    }
+
+    private void setRoundPlayerEndAngryStatus(Player player, Round round) {
+        if(player == this.player) {
+            round.setPlayerEndAngryStatus(true);
+        } else {
+            round.setComponentPlayerEndAngryStatus(true);
+        }
+    }
+
+    private boolean isGlobalPlayerWin(boolean playerWin, Player player) {
+        return player == this.player ? playerWin : !playerWin;
     }
 
     private int findTimidAngryMakeComponentAngryCardIndex(Player player, Player componentPlayer) {
@@ -729,14 +712,18 @@ public class VerbalBattleGame {
         return Card.INDEX_NOT_FOUND;
     }
 
-    //todo 当对手的生命值为0时不结束愤怒状态
-    private void automaticEndAngryStatus(Player player, Player componentPlayer, int roundIndex) {
+    //todo 自动结束愤怒状态的操作统一放到回合效果发动完成后
+    private void automaticEndAngryStatus(Round round) {
         //生命值为0时怒气值不可变动
         if(player.getLife() == 0 || componentPlayer.getLife() == 0) {
             return;
         }
-        if(player.isAngry() && roundIndex - player.getLastAngryRound() >= ANGRY_KEEP_ROUNDS) {
+        int roundIndex = round.getIndex();
+        if(player.isAngry() && (roundIndex - player.getLastAngryRound() >= ANGRY_KEEP_ROUNDS || round.isPlayerEndAngryStatus())) {
             player.changeAnger(-100, roundIndex);
+        }
+        if(componentPlayer.isAngry() && (roundIndex - componentPlayer.getLastAngryRound() >= ANGRY_KEEP_ROUNDS || round.isComponentPlayerEndAngryStatus())) {
+            componentPlayer.changeAnger(-100, roundIndex);
         }
     }
 
@@ -774,24 +761,6 @@ public class VerbalBattleGame {
             }
         });
         System.out.println(cards);
-    }
-
-    /**
-     * 愤怒状态足以改变回合胜负的枚举类
-     */
-    private enum AngryStatusChangeRoundWin {
-        /**
-         * 不影响
-         */
-        NO_OP,
-        /**
-         * player回合胜
-         */
-        PLAYER,
-        /**
-         * componentPlayer回合胜
-         */
-        COMPONENT_PLAYER
     }
 
 }

@@ -52,9 +52,6 @@ public class VerbalBattleMain {
                             PersonRepository.getINSTANCE().getPersonSize(), computerPerson.getIndex());
                     Person artificialPerson = player.choosePerson(index);
                     ConsoleUtils.println("你选择了：" + artificialPerson.getName());
-                    ConsoleUtils.println("-------------游戏开始------------");
-                    VerbalBattleGame.getINSTANCE().initializeCards();
-                    VerbalBattleGame.getINSTANCE().printPlayerStatus();
                     break;
                 case VerbalBattleGame.GAME_MODE_ARTIFICIAL_ARTIFICIAL:
                     ConsoleUtils.println("玩家对玩家");
@@ -71,9 +68,6 @@ public class VerbalBattleMain {
                     Person componentPlayerPerson = componentPlayer.choosePerson(index);
                     ConsoleUtils.println(player.getPlayerName() + "选择了：" + playerPerson.getName());
                     ConsoleUtils.println(componentPlayer.getPlayerName() + "选择了：" + componentPlayerPerson.getName());
-                    ConsoleUtils.println("-------------游戏开始------------");
-                    VerbalBattleGame.getINSTANCE().initializeCards();
-                    VerbalBattleGame.getINSTANCE().printPlayerStatus();
                     break;
                 case VerbalBattleGame.GAME_MODE_SUPERCOMPUTER_SUPERCOMPUTER:
                 case VerbalBattleGame.GAME_MODE_COMPUTER_COMPUTER:
@@ -100,14 +94,14 @@ public class VerbalBattleMain {
                     Person computer2Person = ((ComputerPlayer) componentPlayer).choosePersonWithExclusion(computer1Person.getIndex());
                     ConsoleUtils.println(player.getPlayerName() + "选择了：" + computer1Person.getName());
                     ConsoleUtils.println(componentPlayer.getPlayerName() + "选择了：" + computer2Person.getName());
-                    ConsoleUtils.println("-------------游戏开始------------");
-                    VerbalBattleGame.getINSTANCE().initializeCards();
-                    VerbalBattleGame.getINSTANCE().printPlayerStatus();
                     break;
             }
             if(menuChoice == VerbalBattleGame.GAME_MODE_EXIT) {
                 break;
             }
+            VerbalBattleGame.getINSTANCE().initializeCards();
+            VerbalBattleGame.getINSTANCE().printPlayerStatus();
+            ConsoleUtils.println("-------------游戏开始------------");
             do {
                 VerbalBattleGame.getINSTANCE().startNewRound();
                 VerbalBattleGame.getINSTANCE().printPlayerCards();
@@ -116,7 +110,9 @@ public class VerbalBattleMain {
                 VerbalBattleGame.getINSTANCE().roundTakeEffects();
                 if(!VerbalBattleGame.getINSTANCE().isGameOver()) {
                     VerbalBattleGame.getINSTANCE().addCards();
+                    VerbalBattleGame.getINSTANCE().automaticEndAngryStatus();
                 }
+                VerbalBattleGame.getINSTANCE().printPlayerStatus();
             } while (!VerbalBattleGame.getINSTANCE().isGameOver());
             if(VerbalBattleGame.getINSTANCE().getGameMode() == VerbalBattleGame.GAME_MODE_ARTIFICIAL_COMPUTER) {
                 ConsoleUtils.println("-------------游戏结束，你" + (VerbalBattleGame.getINSTANCE().isWin() ? "赢" : "输") + "了！------------");

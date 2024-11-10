@@ -7,14 +7,11 @@ public class Round {
     private int index;
     private CardType roundType;
     private Card playerMove, componentPlayerMove;
+    private boolean playerEndAngryStatus, componentPlayerEndAngryStatus;
     /**
      * 当前回合的胜负，下一回合根据此变量确定先手/后手
      */
     private boolean win;
-    /**
-     * 是否强制写入回合胜负，为true则后续不能再更改
-     */
-    private boolean forceSetWin;
     private Effect effect;
 
     public Round(int index) {
@@ -49,24 +46,28 @@ public class Round {
         this.componentPlayerMove = componentPlayerMove;
     }
 
+    public boolean isPlayerEndAngryStatus() {
+        return playerEndAngryStatus;
+    }
+
+    public void setPlayerEndAngryStatus(boolean playerEndAngryStatus) {
+        this.playerEndAngryStatus = playerEndAngryStatus;
+    }
+
+    public boolean isComponentPlayerEndAngryStatus() {
+        return componentPlayerEndAngryStatus;
+    }
+
+    public void setComponentPlayerEndAngryStatus(boolean componentPlayerEndAngryStatus) {
+        this.componentPlayerEndAngryStatus = componentPlayerEndAngryStatus;
+    }
+
     public boolean isWin() {
         return win;
     }
 
     public void setWin(boolean win) {
-        if(!forceSetWin) {
-            this.win = win;
-        } else {
-            DebugUtils.debugPrintln("Round["+index+"]forceSetWin=true,not setting win to "+win);
-        }
-    }
-
-    public boolean isForceSetWin() {
-        return forceSetWin;
-    }
-
-    public void setForceSetWin(boolean forceSetWin) {
-        this.forceSetWin = forceSetWin;
+        this.win = win;
     }
 
     public Effect getEffect() {
