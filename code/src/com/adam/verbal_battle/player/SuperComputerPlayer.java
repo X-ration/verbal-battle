@@ -136,53 +136,71 @@ public class SuperComputerPlayer extends ComputerPlayer{
     }
 
     private Card findSuppressingCardBothNormal(Player componentPlayer, Round round, Random random, boolean isFinal) {
-        NormalCard card = findBiggestNormalCard(round);
-        //同时有普通牌，如果手牌最大牌环境与回合环境一致，且力量为大，则出最大牌
-        if(card.getType() == round.getRoundType() && card.getPower() == CardPower.BIG) {
-            removeCard(card);
-            return card;
+        //双方都为愤怒状态且性格为刚毅，则出最小牌保存实力
+        if(isAngry() && getPerson().getCharacter() == Character.RESOLUTE && componentPlayer.isAngry()
+                && componentPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+            return chooseSmallestNormalCard(round);
         }
-        //手牌最大牌与环境一致，且力量为中
-        else if(card.getType() == round.getRoundType() && card.getPower() == CardPower.MEDIUM) {
+        //愤怒状态且性格为刚毅，则手中的普通牌为压制，按照概率出力量最大的牌
+        if(isAngry() && getPerson().getCharacter() == Character.RESOLUTE) {
             double chance = random.nextDouble();
-            if(chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSING_MEDIUM_CHANCE) {
+            if(chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_RESOLUTE_ANGRY_SUPPRESSING_CHANCE) {
+                return chooseBiggestPowerCard();
+            }
+        } else {
+            NormalCard card = findBiggestNormalCard(round);
+            //同时有普通牌，如果手牌最大牌环境与回合环境一致，且力量为大，则出最大牌
+            if (card.getType() == round.getRoundType() && card.getPower() == CardPower.BIG) {
                 removeCard(card);
                 return card;
             }
-        }
-        //手牌最大牌与环境一致，且力量为小
-        else if(card.getType() == round.getRoundType() && card.getPower() == CardPower.SMALL) {
+            //手牌最大牌与环境一致，且力量为中
+            else if (card.getType() == round.getRoundType() && card.getPower() == CardPower.MEDIUM) {
+                double chance = random.nextDouble();
+                if (chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSING_MEDIUM_CHANCE) {
+                    removeCard(card);
+                    return card;
+                }
+            }
+            //手牌最大牌与环境一致，且力量为小
+            else if (card.getType() == round.getRoundType() && card.getPower() == CardPower.SMALL) {
+                double chance = random.nextDouble();
+                if (chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSING_SMALL_CHANCE) {
+                    removeCard(card);
+                    return card;
+                }
+            }
+            //否则根据概率决定是否压制（对手普通牌环境与回合环境一致为压制）
             double chance = random.nextDouble();
-            if(chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSING_SMALL_CHANCE) {
-                removeCard(card);
-                return card;
+            boolean resoluteSuppressing = componentPlayer.isAngry() && componentPlayer.getPerson().getCharacter() == Character.RESOLUTE;
+            //被压制情况下根据概率决定出最小牌
+            if (resoluteSuppressing || chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESS_CHANCE) {
+                chance = random.nextDouble();
+                if (chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSED_SMALLEST_CHANCE) {
+                    return chooseSmallestNormalCard(round);
+                }
             }
-        }
-        //否则根据概率决定是否压制（对手普通牌环境与回合环境一致为压制）
-        double chance = random.nextDouble();
-        boolean resoluteSuppressing = componentPlayer.isAngry() && componentPlayer.getPerson().getCharacter() == Character.RESOLUTE;
-        //被压制情况下根据概率决定出最小牌
-        if(resoluteSuppressing || chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESS_CHANCE) {
-            chance = random.nextDouble();
-            if(chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSED_SMALLEST_CHANCE) {
-                return chooseSmallestNormalCard(round);
-            }
-        }
-        //不被压制情况下根据概率决定出最大牌
-        else {
-            chance = random.nextDouble();
-            if(chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSED_BIGGEST_CHANCE) {
-                removeCard(card);
-                return card;
+            //不被压制情况下根据概率决定出最大牌
+            else {
+                chance = random.nextDouble();
+                if (chance <= VerbalBattleGame.SUPERCOMPUTER_BOTH_NORMAL_SUPPRESSED_BIGGEST_CHANCE) {
+                    removeCard(card);
+                    return card;
+                }
             }
         }
         if(isFinal) {
+            //自己愤怒状态且性格为刚毅，出最大力量牌
+            if(isAngry() && getPerson().getCharacter() == Character.RESOLUTE) {
+                return chooseBiggestPowerCard();
+            }
             //对手性格刚毅，在愤怒状态下是被压制，出最小牌减少损失
-            if(resoluteSuppressing) {
+            else if(componentPlayer.isAngry() && componentPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
                 return chooseSmallestNormalCard(round);
             }
             //出最大牌与对手争夺回合
             else {
+                Card card = findBiggestNormalCard(round);
                 removeCard(card);
                 return card;
             }
@@ -332,6 +350,17 @@ public class SuperComputerPlayer extends ComputerPlayer{
         return card;
     }
 
+    /**
+     * 出力量最大的牌，调用此方法要确保手牌有普通牌
+     * @return
+     */
+    private Card chooseBiggestPowerCard() {
+        Card card = findBiggestPowerCard();
+        Assert.assertTrue(card != null, "chooseBiggestPowerCard card null");
+        removeCard(card);
+        return card;
+    }
+
     private NormalCard findBiggestNormalCard(Round round) {
         List<NormalCard> cardList = sortNormalCards(round);
         return cardList.get(cardList.size() - 1);
@@ -340,6 +369,11 @@ public class SuperComputerPlayer extends ComputerPlayer{
     private NormalCard findSmallestNormalCard(Round round) {
         List<NormalCard> cardList = sortNormalCards(round);
         return cardList.get(0);
+    }
+
+    private NormalCard findBiggestPowerCard() {
+        List<NormalCard> cardList = sortNormalCardsByPower();
+        return cardList.get(cardList.size() - 1);
     }
 
     private List<NormalCard> sortNormalCards(Round round) {
@@ -363,6 +397,17 @@ public class SuperComputerPlayer extends ComputerPlayer{
         return cardList;
     }
 
+    private List<NormalCard> sortNormalCardsByPower() {
+        List<NormalCard> cardList = new LinkedList<>();
+        for(Card card: this.cardList) {
+            if(card instanceof NormalCard) {
+                cardList.add((NormalCard) card);
+            }
+        }
+        cardList.sort(Comparator.comparing(NormalCard::getPower));
+        return cardList;
+    }
+
     public static void main(String[] args) {
         List<NormalCard> cards = new LinkedList<>();
         cards.add(NormalCard.PRINCIPLE_BIG);
@@ -374,17 +419,7 @@ public class SuperComputerPlayer extends ComputerPlayer{
         cards.add(NormalCard.STORY_SMALL);
         Round round = new Round(0);
         round.setRoundType(CardType.PRINCIPLE);
-        cards.sort((o1, o2) -> {
-            if (o1.getType() == o2.getType()) {
-                return o1.getPower().compareTo(o2.getPower());
-            } else if (o1.getType() == round.getRoundType()) {
-                return 1;
-            } else if (o2.getType() == round.getRoundType()) {
-                return -1;
-            } else {
-                return o1.getPower().compareTo(o2.getPower());
-            }
-        });
+        cards.sort(Comparator.comparing(NormalCard::getPower));
         System.out.println(cards);
     }
 }

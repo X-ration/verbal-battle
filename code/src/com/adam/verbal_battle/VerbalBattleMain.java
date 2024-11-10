@@ -1,5 +1,6 @@
 package com.adam.verbal_battle;
 
+import com.adam.verbal_battle.game.MenuChoice;
 import com.adam.verbal_battle.game.Round;
 import com.adam.verbal_battle.game.VerbalBattleGame;
 import com.adam.verbal_battle.person.Person;
@@ -12,32 +13,25 @@ import com.adam.verbal_battle.player.SuperComputerPlayer;
 public class VerbalBattleMain {
     public static void main(String[] args) {
         PersonRepository.getINSTANCE().loadPersons();
-        ConsoleUtils.println("舌战 v1.0");
-        int menuChoice = 0;
-        while(menuChoice != VerbalBattleGame.GAME_MODE_EXIT) {
-            ConsoleUtils.println("1.玩家对电脑");
-            ConsoleUtils.println("2.玩家对超级电脑");
-            ConsoleUtils.println("3.玩家对玩家");
-            ConsoleUtils.println("4.电脑对电脑");
-            ConsoleUtils.println("5.电脑对超级电脑");
-            ConsoleUtils.println("6.超级电脑对超级电脑");
-            ConsoleUtils.println("7.退出游戏");
-            menuChoice = ConsoleUtils.inputWithRange("请选择游戏模式（序号）：", 1, 7);
+        MenuChoice menuChoice = null;
+        while(menuChoice == null || menuChoice != MenuChoice.EXIT) {
+            MenuChoice.printMenuChoices();
+            int choice = ConsoleUtils.inputWithRange("请选择（序号）：", 1, MenuChoice.values().length);
+            menuChoice = MenuChoice.values()[choice-1];
 
             Player player = null, componentPlayer = null;
             int index;
-            if(menuChoice != VerbalBattleGame.GAME_MODE_EXIT) {
+            if(menuChoice != MenuChoice.EXIT) {
                 VerbalBattleGame.getINSTANCE().setGameMode(menuChoice);
             }
+            ConsoleUtils.println(menuChoice.getDesc());
             switch (menuChoice) {
-                case VerbalBattleGame.GAME_MODE_ARTIFICIAL_COMPUTER:
-                case VerbalBattleGame.GAME_MODE_ARTIFICIAL_SUPERCOMPUTER:
-                    if(menuChoice == VerbalBattleGame.GAME_MODE_ARTIFICIAL_COMPUTER) {
-                        ConsoleUtils.println("玩家对电脑");
+                case ARTIFICIAL_COMPUTER:
+                case ARTIFICIAL_SUPERCOMPUTER:
+                    if(menuChoice == MenuChoice.ARTIFICIAL_COMPUTER) {
                         player = new ArtificialPlayer("玩家");
                         componentPlayer = new ComputerPlayer("电脑");
-                    } else if(menuChoice == VerbalBattleGame.GAME_MODE_ARTIFICIAL_SUPERCOMPUTER) {
-                        ConsoleUtils.println("玩家对超级电脑");
+                    } else if(menuChoice == MenuChoice.ARTIFICIAL_SUPERCOMPUTER) {
                         player = new ArtificialPlayer("玩家");
                         componentPlayer = new ComputerPlayer("超级电脑");
                     } else {
@@ -53,8 +47,7 @@ public class VerbalBattleMain {
                     Person artificialPerson = player.choosePerson(index);
                     ConsoleUtils.println("你选择了：" + artificialPerson.getName());
                     break;
-                case VerbalBattleGame.GAME_MODE_ARTIFICIAL_ARTIFICIAL:
-                    ConsoleUtils.println("玩家对玩家");
+                case ARTIFICIAL_ARTIFICIAL:
                     player = new ArtificialPlayer("玩家1");
                     componentPlayer = new ArtificialPlayer("玩家2");
                     VerbalBattleGame.getINSTANCE().setPlayer(player);
@@ -69,19 +62,16 @@ public class VerbalBattleMain {
                     ConsoleUtils.println(player.getPlayerName() + "选择了：" + playerPerson.getName());
                     ConsoleUtils.println(componentPlayer.getPlayerName() + "选择了：" + componentPlayerPerson.getName());
                     break;
-                case VerbalBattleGame.GAME_MODE_SUPERCOMPUTER_SUPERCOMPUTER:
-                case VerbalBattleGame.GAME_MODE_COMPUTER_COMPUTER:
-                case VerbalBattleGame.GAME_MODE_COMPUTER_SUPERCOMPUTER:
-                    if(menuChoice == VerbalBattleGame.GAME_MODE_COMPUTER_COMPUTER) {
-                        ConsoleUtils.println("电脑对电脑");
+                case SUPERCOMPUTER_SUPERCOMPUTER:
+                case COMPUTER_COMPUTER:
+                case COMPUTER_SUPERCOMPUTER:
+                    if(menuChoice == MenuChoice.COMPUTER_COMPUTER) {
                         player = new ComputerPlayer("电脑1");
                         componentPlayer = new ComputerPlayer("电脑2");
-                    } else if(menuChoice == VerbalBattleGame.GAME_MODE_SUPERCOMPUTER_SUPERCOMPUTER) {
-                        ConsoleUtils.println("超级电脑对超级电脑");
+                    } else if(menuChoice == MenuChoice.SUPERCOMPUTER_SUPERCOMPUTER) {
                         player = new SuperComputerPlayer("超级电脑1");
                         componentPlayer = new SuperComputerPlayer("超级电脑2");
-                    } else if(menuChoice == VerbalBattleGame.GAME_MODE_COMPUTER_SUPERCOMPUTER) {
-                        ConsoleUtils.println("电脑对超级电脑");
+                    } else if(menuChoice == MenuChoice.COMPUTER_SUPERCOMPUTER) {
                         player = new ComputerPlayer("电脑");
                         componentPlayer = new SuperComputerPlayer("超级电脑");
                     } else {
@@ -96,7 +86,7 @@ public class VerbalBattleMain {
                     ConsoleUtils.println(componentPlayer.getPlayerName() + "选择了：" + computer2Person.getName());
                     break;
             }
-            if(menuChoice == VerbalBattleGame.GAME_MODE_EXIT) {
+            if(menuChoice == MenuChoice.EXIT) {
                 break;
             }
             VerbalBattleGame.getINSTANCE().initializeCards();
@@ -114,7 +104,8 @@ public class VerbalBattleMain {
                 }
                 VerbalBattleGame.getINSTANCE().printPlayerStatus();
             } while (!VerbalBattleGame.getINSTANCE().isGameOver());
-            if(VerbalBattleGame.getINSTANCE().getGameMode() == VerbalBattleGame.GAME_MODE_ARTIFICIAL_COMPUTER) {
+            if(VerbalBattleGame.getINSTANCE().getGameMode() == MenuChoice.ARTIFICIAL_COMPUTER
+                    || VerbalBattleGame.getINSTANCE().getGameMode() == MenuChoice.ARTIFICIAL_SUPERCOMPUTER) {
                 ConsoleUtils.println("-------------游戏结束，你" + (VerbalBattleGame.getINSTANCE().isWin() ? "赢" : "输") + "了！------------");
             } else {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -128,7 +119,7 @@ public class VerbalBattleMain {
                 ConsoleUtils.println(stringBuilder.toString());
             }
             VerbalBattleGame.getINSTANCE().reset();
+            menuChoice = null;
         }
-        ConsoleUtils.println("退出游戏");
     }
 }

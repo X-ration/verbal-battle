@@ -16,6 +16,10 @@ public class VerbalBattleGame {
 
     private static VerbalBattleGame INSTANCE;
     /**
+     * <b>游戏当前版本号</b>
+     */
+    public static String GAME_VERSION = "1.4";
+    /**
      * 生成特殊卡片的概率
      */
     public static final double CHANCE_SPECIAL_CARD = 0.15;
@@ -47,6 +51,10 @@ public class VerbalBattleGame {
      * 超级电脑在对手有特殊牌时被压制决定出最小牌的概率
      */
     public static final double SUPERCOMPUTER_COMPONENT_SPECIAL_SUPPRESSED_CHANCE = 0.5;
+    /**
+     * 超级电脑在双方有普通牌时自己是愤怒状态且性格为刚毅出力量最大牌的概率
+     */
+    public static final double SUPERCOMPUTER_BOTH_NORMAL_RESOLUTE_ANGRY_SUPPRESSING_CHANCE = 0.8;
     /**
      * 超级电脑在双方有普通牌时自己手牌与回合环境一致力量为中决定压制的概率
      */
@@ -84,7 +92,7 @@ public class VerbalBattleGame {
     private boolean win;
     private List<Round> roundList = new LinkedList<>();
     private int lastRoundTypeChangedRound = 1;
-    private int gameMode;
+    private MenuChoice gameMode;
     private boolean firstRoundChangeRoundType = false;
 
     public static VerbalBattleGame getINSTANCE() {
@@ -108,15 +116,15 @@ public class VerbalBattleGame {
         this.win = false;
         this.roundList = new LinkedList<>();
         this.lastRoundTypeChangedRound = 1;
-        this.gameMode = 0;
+        this.gameMode = MenuChoice.EXIT;
         this.firstRoundChangeRoundType = false;
     }
 
-    public int getGameMode() {
+    public MenuChoice getGameMode() {
         return gameMode;
     }
 
-    public void setGameMode(int gameMode) {
+    public void setGameMode(MenuChoice gameMode) {
         this.gameMode = gameMode;
     }
 
@@ -161,7 +169,7 @@ public class VerbalBattleGame {
     public void printPlayerCards() {
         ConsoleUtils.print(player.getPlayerName() + "卡片:" + this.player.formatCards());
         ConsoleUtils.print("|");
-        if(gameMode == GAME_MODE_ARTIFICIAL_COMPUTER) {
+        if(gameMode == MenuChoice.ARTIFICIAL_COMPUTER || gameMode == MenuChoice.ARTIFICIAL_SUPERCOMPUTER) {
             ConsoleUtils.println(componentPlayer.getPlayerName() + "卡片:" + ((ComputerPlayer)this.componentPlayer).formatCoveringCards());
         } else {
             ConsoleUtils.println(componentPlayer.getPlayerName() + "卡片:" + this.componentPlayer.formatCards());
@@ -366,13 +374,13 @@ public class VerbalBattleGame {
                 ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
             } else {
                 componentMove = playerMove(this.componentPlayer);
-                if(gameMode == GAME_MODE_ARTIFICIAL_COMPUTER) {
+                if(gameMode == MenuChoice.ARTIFICIAL_COMPUTER || gameMode == MenuChoice.ARTIFICIAL_SUPERCOMPUTER) {
                     ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + (componentMove instanceof SpecialCard ? "特殊卡片" : "普通卡片"));
                 } else {
                     ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
                 }
                 playerMove = playerMove(this.player);
-                if(gameMode == GAME_MODE_ARTIFICIAL_COMPUTER) {
+                if(gameMode == MenuChoice.ARTIFICIAL_COMPUTER || gameMode == MenuChoice.ARTIFICIAL_SUPERCOMPUTER) {
                     ConsoleUtils.println(this.componentPlayer.getPlayerName() + "出牌：" + componentMove.getDesc());
                 }
                 ConsoleUtils.println(this.player.getPlayerName() + "出牌：" + playerMove.getDesc());
@@ -451,7 +459,7 @@ public class VerbalBattleGame {
         }
         //对手特殊牌，自己普通牌
         else if(componentPlayerMove instanceof SpecialCard && playerMove instanceof NormalCard) {
-            if(this.componentPlayer.isAngry() && this.componentPlayer.getPerson().getCharacter() == Character.RESOLUTE) {
+            if(this.componentPlayer.isAngry() && this.componentPlayer.getPerson().getCharacter() == Character.RESOLUTE){
                 round.setWin(false);
                 round.setEffect(Effect.COMPONENT_PLAYER);
             }
@@ -470,7 +478,7 @@ public class VerbalBattleGame {
         }
         //对手普通牌，自己特殊牌
         else if(componentPlayerMove instanceof NormalCard && playerMove instanceof SpecialCard) {
-            if(this.player.isAngry() && this.player.getPerson().getCharacter() == Character.RESOLUTE) {
+            if(this.player.isAngry() && this.player.getPerson().getCharacter() == Character.RESOLUTE){
                 round.setWin(true);
                 round.setEffect(Effect.PLAYER);
             }
